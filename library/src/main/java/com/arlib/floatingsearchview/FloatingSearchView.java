@@ -1916,6 +1916,13 @@ public class FloatingSearchView extends FrameLayout {
     }
 
     @Override
+    public void setEnabled(boolean enabled) {
+        mSearchInput.setEnabled(enabled);
+        super.setEnabled(enabled);
+
+    }
+
+    @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
 
