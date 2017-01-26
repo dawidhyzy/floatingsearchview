@@ -1918,8 +1918,10 @@ public class FloatingSearchView extends FrameLayout {
     @Override
     public void setEnabled(boolean enabled) {
         mSearchInput.setEnabled(enabled);
+        mLeftAction.setEnabled(enabled);
+        mMenuView.setEnabled(enabled);
+        setAlpha(enabled ? 1 : 0.7F);
         super.setEnabled(enabled);
-
     }
 
     @Override
