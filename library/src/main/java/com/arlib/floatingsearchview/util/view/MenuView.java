@@ -33,14 +33,13 @@ import android.view.animation.AccelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-
 import com.arlib.floatingsearchview.R;
 import com.arlib.floatingsearchview.util.MenuPopupHelper;
 import com.arlib.floatingsearchview.util.Util;
 import com.bartoszlipinski.viewpropertyobjectanimator.ViewPropertyObjectAnimator;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -80,11 +79,9 @@ public class MenuView extends LinearLayout {
     private OnVisibleWidthChangedListener mOnVisibleWidthChangedListener;
     private int mVisibleWidth;
 
-    private List<ObjectAnimator> anims = new ArrayList<>();
+    private boolean showBadge = false;
 
-    public interface OnVisibleWidthChangedListener {
-        void onItemsMenuVisibleWidthChanged(int newVisibleWidth);
-    }
+    private List<ObjectAnimator> anims = new ArrayList<>();
 
     public MenuView(Context context) {
         this(context, null);
@@ -92,7 +89,8 @@ public class MenuView extends LinearLayout {
 
     public MenuView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        ACTION_DIMENSION_PX = context.getResources().getDimension(R.dimen.square_button_size);
+        ACTION_DIMENSION_PX = context.getResources()
+                .getDimension(R.dimen.square_button_size);
         init();
     }
 
@@ -125,8 +123,6 @@ public class MenuView extends LinearLayout {
     /**
      * Set the callback that will be called when menu
      * items a selected.
-     *
-     * @param menuCallback
      */
     public void setMenuCallback(MenuBuilder.Callback menuCallback) {
         this.mMenuCallback = menuCallback;
@@ -140,10 +136,9 @@ public class MenuView extends LinearLayout {
      * , removes all of its associated action views, and re-creates
      * the menu and action items to fit in the new width.</p>
      *
-     * @param availWidth the width available for the menu to use. If
-     *                   there is room, menu items that are flagged with
-     *                   android:showAsAction="ifRoom" or android:showAsAction="always"
-     *                   will show as actions.
+     * @param availWidth the width available for the menu to use. If there is room, menu items that
+     * are flagged with android:showAsAction="ifRoom" or android:showAsAction="always" will show as
+     * actions.
      */
     public void reset(int menu, int availWidth) {
         mMenu = menu;
@@ -174,16 +169,17 @@ public class MenuView extends LinearLayout {
         List<MenuItemImpl> localActionItems = filter(mMenuItems, new MenuItemImplPredicate() {
             @Override
             public boolean apply(MenuItemImpl menuItem) {
-                return menuItem.getIcon() != null && (menuItem.requiresActionButton() || menuItem.requestsActionButton());
+                return menuItem.getIcon() != null && (menuItem.requiresActionButton()
+                        || menuItem.requestsActionButton());
             }
         });
-
 
         int availItemRoom = availWidth / (int) ACTION_DIMENSION_PX;
 
         //determine if to show overflow menu
         boolean addOverflowAtTheEnd = false;
-        if (((localActionItems.size() < mMenuItems.size()) || availItemRoom < localActionItems.size())) {
+        if (((localActionItems.size() < mMenuItems.size())
+                || availItemRoom < localActionItems.size())) {
             addOverflowAtTheEnd = true;
             availItemRoom--;
         }
@@ -195,10 +191,15 @@ public class MenuView extends LinearLayout {
                 final MenuItemImpl menuItem = localActionItems.get(i);
                 if (menuItem.getIcon() != null) {
 
-                    ImageView action = createActionView();
+                    FrameLayout actionContainer = createActionView();
+                    ImageView action = (ImageView) actionContainer.findViewById(
+                            R.id.search_bar_mic_or_ex);
                     action.setImageDrawable(menuItem.getIcon());
                     Util.setIconColor(action, mActionIconColor);
-                    addView(action);
+                    if (showBadge) {
+                        addBadge(actionContainer);
+                    }
+                    addView(actionContainer);
                     mActionItems.add(menuItem);
                     actionItemsIds.add(menuItem.getItemId());
 
@@ -245,27 +246,39 @@ public class MenuView extends LinearLayout {
         actionItemsIds = null;
 
         if (mOnVisibleWidthChangedListener != null) {
-            mVisibleWidth = ((int) ACTION_DIMENSION_PX * getChildCount()) - (mHasOverflow ? Util.dpToPx(8) : 0);
+            mVisibleWidth =
+                    ((int) ACTION_DIMENSION_PX * getChildCount()) - (mHasOverflow ? Util.dpToPx(8)
+                            : 0);
             mOnVisibleWidthChangedListener.onItemsMenuVisibleWidthChanged(mVisibleWidth);
         }
+    }
+
+    private void addBadge(FrameLayout actionContainer) {
+        ImageView badge = (ImageView)LayoutInflater.from(getContext())
+                .inflate(R.layout.action_item_badge, this, false);
+        actionContainer.addView(badge);
     }
 
     public int getVisibleWidth() {
         return mVisibleWidth;
     }
 
-    private ImageView createActionView() {
-        return (ImageView) LayoutInflater.from(getContext()).inflate(R.layout.action_item_layout, this, false);
+    private FrameLayout createActionView() {
+        return (FrameLayout) LayoutInflater.from(getContext())
+                .inflate(R.layout.action_item_layout, this, false);
     }
 
     private ImageView getOverflowActionView() {
-        return (ImageView) LayoutInflater.from(getContext()).inflate(R.layout.overflow_action_item_layout, this, false);
+        return (ImageView) LayoutInflater.from(getContext())
+                .inflate(R.layout.overflow_action_item_layout, this, false);
+    }
+
+    public void setShowBadge(boolean showBadge) {
+        this.showBadge = showBadge;
     }
 
     /**
      * Hides all the menu items flagged with "ifRoom"
-     *
-     * @param withAnim
      */
     public void hideIfRoomItems(boolean withAnim) {
 
@@ -279,19 +292,21 @@ public class MenuView extends LinearLayout {
         List<MenuItemImpl> showAlwaysActionItems = filter(mMenuItems, new MenuItemImplPredicate() {
             @Override
             public boolean apply(MenuItemImpl menuItem) {
-                return  menuItem.getIcon() != null && menuItem.requiresActionButton();
+                return menuItem.getIcon() != null && menuItem.requiresActionButton();
             }
         });
 
         int actionItemIndex;
         for (actionItemIndex = 0;
-             actionItemIndex < mActionItems.size() && actionItemIndex < showAlwaysActionItems.size();
-             actionItemIndex++) {
+                actionItemIndex < mActionItems.size()
+                        && actionItemIndex < showAlwaysActionItems.size();
+                actionItemIndex++) {
 
             final MenuItemImpl showAlwaysActionItem = showAlwaysActionItems.get(actionItemIndex);
 
             //reset action item image if needed
-            if (mActionItems.get(actionItemIndex).getItemId() != showAlwaysActionItem.getItemId()) {
+            if (mActionItems.get(actionItemIndex)
+                    .getItemId() != showAlwaysActionItem.getItemId()) {
 
                 ImageView action = (ImageView) getChildAt(actionItemIndex);
                 action.setImageDrawable(showAlwaysActionItem.getIcon());
@@ -317,7 +332,8 @@ public class MenuView extends LinearLayout {
         for (int i = 0; i < actionItemIndex; i++) {
 
             final View currentChild = getChildAt(i);
-            final float destTransX = (ACTION_DIMENSION_PX * diff) - (mHasOverflow ? Util.dpToPx(8) : 0);
+            final float destTransX =
+                    (ACTION_DIMENSION_PX * diff) - (mHasOverflow ? Util.dpToPx(8) : 0);
             anims.add(ViewPropertyObjectAnimator.animate(currentChild)
                     .setDuration(withAnim ? HIDE_IF_ROOM_ITEMS_ANIM_DURATION : 0)
                     .setInterpolator(new AccelerateInterpolator())
@@ -328,7 +344,8 @@ public class MenuView extends LinearLayout {
                             currentChild.setTranslationX(destTransX);
                         }
                     })
-                    .translationXBy(destTransX).get());
+                    .translationXBy(destTransX)
+                    .get());
         }
 
         //add anims for moving to right and/or zooming out previously shown items
@@ -339,14 +356,17 @@ public class MenuView extends LinearLayout {
 
             //move to right
             if (i != (getChildCount() - 1)) {
-                anims.add(ViewPropertyObjectAnimator.animate(currentView).setDuration(withAnim ? HIDE_IF_ROOM_ITEMS_ANIM_DURATION : 0)
+                anims.add(ViewPropertyObjectAnimator.animate(currentView)
+                        .setDuration(withAnim ? HIDE_IF_ROOM_ITEMS_ANIM_DURATION : 0)
                         .addListener(new AnimatorListenerAdapter() {
                             @Override
                             public void onAnimationEnd(Animator animation) {
 
                                 currentView.setTranslationX(ACTION_DIMENSION_PX);
                             }
-                        }).translationXBy(ACTION_DIMENSION_PX).get());
+                        })
+                        .translationXBy(ACTION_DIMENSION_PX)
+                        .get());
             }
 
             //scale and zoom out
@@ -358,7 +378,9 @@ public class MenuView extends LinearLayout {
 
                             currentView.setScaleX(0.5f);
                         }
-                    }).scaleX(.5f).get());
+                    })
+                    .scaleX(.5f)
+                    .get());
             anims.add(ViewPropertyObjectAnimator.animate(currentView)
                     .setDuration(withAnim ? HIDE_IF_ROOM_ITEMS_ANIM_DURATION : 0)
                     .addListener(new AnimatorListenerAdapter() {
@@ -367,7 +389,9 @@ public class MenuView extends LinearLayout {
 
                             currentView.setScaleY(0.5f);
                         }
-                    }).scaleY(.5f).get());
+                    })
+                    .scaleY(.5f)
+                    .get());
             anims.add(ViewPropertyObjectAnimator.animate(currentView)
                     .setDuration(withAnim ? HIDE_IF_ROOM_ITEMS_ANIM_DURATION : 0)
                     .addListener(new AnimatorListenerAdapter() {
@@ -376,7 +400,9 @@ public class MenuView extends LinearLayout {
 
                             currentView.setAlpha(0.0f);
                         }
-                    }).alpha(0.0f).get());
+                    })
+                    .alpha(0.0f)
+                    .get());
         }
 
         final int actionItemsCount = actionItemIndex;
@@ -396,7 +422,8 @@ public class MenuView extends LinearLayout {
 
                     if (mOnVisibleWidthChangedListener != null) {
                         mVisibleWidth = ((int) ACTION_DIMENSION_PX * actionItemsCount);
-                        mOnVisibleWidthChangedListener.onItemsMenuVisibleWidthChanged(mVisibleWidth);
+                        mOnVisibleWidthChangedListener.onItemsMenuVisibleWidthChanged(
+                                mVisibleWidth);
                     }
                 }
             });
@@ -406,8 +433,6 @@ public class MenuView extends LinearLayout {
 
     /**
      * Shows all the menu items that were hidden by hideIfRoomItems(boolean withAnim)
-     *
-     * @param withAnim
      */
     public void showIfRoomItems(boolean withAnim) {
 
@@ -461,7 +486,8 @@ public class MenuView extends LinearLayout {
                         }
                     })
                     .setInterpolator(interpolator)
-                    .translationX(0).get());
+                    .translationX(0)
+                    .get());
             anims.add(ViewPropertyObjectAnimator.animate(currentView)
                     .addListener(new AnimatorListenerAdapter() {
                         @Override
@@ -471,7 +497,8 @@ public class MenuView extends LinearLayout {
                         }
                     })
                     .setInterpolator(interpolator)
-                    .scaleX(1.0f).get());
+                    .scaleX(1.0f)
+                    .get());
             anims.add(ViewPropertyObjectAnimator.animate(currentView)
                     .addListener(new AnimatorListenerAdapter() {
                         @Override
@@ -481,7 +508,8 @@ public class MenuView extends LinearLayout {
                         }
                     })
                     .setInterpolator(interpolator)
-                    .scaleY(1.0f).get());
+                    .scaleY(1.0f)
+                    .get());
             anims.add(ViewPropertyObjectAnimator.animate(currentView)
                     .addListener(new AnimatorListenerAdapter() {
                         @Override
@@ -491,10 +519,11 @@ public class MenuView extends LinearLayout {
                         }
                     })
                     .setInterpolator(interpolator)
-                    .alpha(1.0f).get());
+                    .alpha(1.0f)
+                    .get());
         }
 
-        if(anims.isEmpty()){
+        if (anims.isEmpty()) {
             return;
         }
 
@@ -509,17 +538,13 @@ public class MenuView extends LinearLayout {
             public void onAnimationEnd(Animator animation) {
 
                 if (mOnVisibleWidthChangedListener != null) {
-                    mVisibleWidth = (getChildCount() * (int) ACTION_DIMENSION_PX) - (mHasOverflow ? Util.dpToPx(8) : 0);
+                    mVisibleWidth = (getChildCount() * (int) ACTION_DIMENSION_PX) - (mHasOverflow
+                            ? Util.dpToPx(8) : 0);
                     mOnVisibleWidthChangedListener.onItemsMenuVisibleWidthChanged(mVisibleWidth);
                 }
             }
         });
         animSet.start();
-    }
-
-    private interface MenuItemImplPredicate {
-
-        boolean apply(MenuItemImpl menuItem);
     }
 
     private List<MenuItemImpl> filter(List<MenuItemImpl> target, MenuItemImplPredicate predicate) {
@@ -556,5 +581,15 @@ public class MenuView extends LinearLayout {
 
         //clear anims if any to avoid leak
         cancelChildAnimListAndClear();
+    }
+
+    public interface OnVisibleWidthChangedListener {
+
+        void onItemsMenuVisibleWidthChanged(int newVisibleWidth);
+    }
+
+    private interface MenuItemImplPredicate {
+
+        boolean apply(MenuItemImpl menuItem);
     }
 }
