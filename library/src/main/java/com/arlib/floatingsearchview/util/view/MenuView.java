@@ -64,6 +64,7 @@ public class MenuView extends LinearLayout {
     private MenuBuilder.Callback mMenuCallback;
 
     private int mActionIconColor;
+    private int mActionIconBadgeColor;
     private int mOverflowIconColor;
 
     //all menu items
@@ -80,6 +81,7 @@ public class MenuView extends LinearLayout {
     private int mVisibleWidth;
 
     private boolean showBadge = false;
+
 
     private List<ObjectAnimator> anims = new ArrayList<>();
 
@@ -99,6 +101,10 @@ public class MenuView extends LinearLayout {
         mMenuPopupHelper = new MenuPopupHelper(getContext(), mMenuBuilder, this);
         mActionIconColor = Util.getColor(getContext(), R.color.gray_active_icon);
         mOverflowIconColor = Util.getColor(getContext(), R.color.gray_active_icon);
+    }
+
+    public void setActionIconBadgeColor(int actionIconBadgeColor) {
+        this.mActionIconBadgeColor = actionIconBadgeColor;
     }
 
     public void setActionIconColor(int actionColor) {
@@ -454,7 +460,7 @@ public class MenuView extends LinearLayout {
 
             //reset all the action item views
             if (i < mActionItems.size()) {
-                ImageView action = (ImageView) currentView;
+                ImageView action = (ImageView) currentView.findViewById(R.id.search_bar_mic_or_ex);
                 final MenuItem actionItem = mActionItems.get(i);
                 action.setImageDrawable(actionItem.getIcon());
                 Util.setIconColor(action, mActionIconColor);
